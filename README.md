@@ -100,7 +100,28 @@ dvc push
 ```shell
 wget https://raw.githubusercontent.com/IITMBSMLOps/ga_resources/refs/heads/week_1/data/v1/data.csv -O data.csv
 ```
-Repeat steps 3 and 4
+### Train the model
+```shell
+python train.py
+```
+
+### Add files to dvc
+```shell
+dvc add data.csv artifacts/model.joblib
+```
+
+### Commit the current state:
+```shell
+git add .gitignore data.csv.dvc artifacts/model.joblib.dvc artifacts/.gitignore
+git commit -m "First model, trained"
+git tag -a "v2.0" -m "model v2.0"
+```
+
+### Push to both Git and DVC data
+```shell
+git push -u origin main
+dvc push
+```
 
 ## Explicitly push all tags to Git
 ```shell
