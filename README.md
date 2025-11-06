@@ -56,7 +56,10 @@ dvc init
 ### Add Google Cloud storage bucket as Remote storage
 ```shell
 dvc remote add -d gcs_remote gs://mlops-lively-nimbus-473407-m9
-Create folder to store model locally
+```
+
+### Create folder to store model locally
+```shell
 mkdir artifacts
 ```
 
@@ -65,11 +68,12 @@ mkdir artifacts
 ### Get the data
 ```shell
 wget https://raw.githubusercontent.com/IITMBSMLOps/ga_resources/refs/heads/week_1/data/raw/iris.csv -O data.csv
+echo "/data.csv" >> .gitignore
 ```
 
 ### Train the model
 ```shell
-python3 train.py
+python train.py
 ```
 
 ## 4. Demonstrate storing data and model files as part of DVC
