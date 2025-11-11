@@ -27,7 +27,7 @@ MODEL_ARTIFACT_PATH = os.path.join(MODEL_DOWNLOAD_PATH, "random_forest_model")
 LOCAL_ARTIFACT_DIR = "artifacts"
 LOCAL_MODEL_PATH = os.path.join(LOCAL_ARTIFACT_DIR, "random_forest_model.pkl")
 
-# Ensure local directories exist
+# Ensure directories exist
 os.makedirs(MODEL_DOWNLOAD_PATH, exist_ok=True)
 os.makedirs(LOCAL_ARTIFACT_DIR, exist_ok=True)
 
@@ -37,11 +37,11 @@ os.makedirs(LOCAL_ARTIFACT_DIR, exist_ok=True)
 app = FastAPI(
     title="MLflow Model API",
     description="Train, fetch, and predict using MLflow-managed models.",
-    version="1.2.0",
+    version="1.3.0",
 )
 
 # --------------------------------------------------------------
-# Request Schema for Prediction
+# Request Schema
 # --------------------------------------------------------------
 class IrisInput(BaseModel):
     sepal_length: float
@@ -118,7 +118,7 @@ def tune_random_forest(X_train, y_train, X_test, y_test):
                 registered_model_name=MODEL_NAME,
             )
 
-            # --- Save locally under artifacts/ ---
+            # --- Save locally ---
             joblib.dump(best_model, LOCAL_MODEL_PATH)
             print(f"✅ Model saved locally at: {LOCAL_MODEL_PATH}")
 
@@ -175,19 +175,41 @@ def fetch_latest_model():
         raise HTTPException(status_code=500, detail=f"Error fetching model: {e}")
 
 # --------------------------------------------------------------
-# Utility: Load Latest Model (from local dump or MLflow)
+# Utility: Load Latest Model (Improved)
 # --------------------------------------------------------------
 def load_latest_model():
-    """Load model from local 'artifacts' folder or from MLflow if missing."""
+    """
+    Load model in the following order:
+    1️⃣ Try to load from local 'artifacts/random_forest_model.pkl'
+    2️⃣ If missing, try to load from downloaded MLflow artifacts in 'downloaded_models/random_forest_model'
+    3️⃣ If still missing, fetch the latest model from MLflow and then load it
+    """
     try:
+        # 1️⃣ Load from local dump if available
         if os.path.exists(LOCAL_MODEL_PATH):
-            print(f"Loading local model from {LOCAL_MODEL_PATH}")
+            print(f"✅ Loading model from local artifacts: {LOCAL_MODEL_PATH}")
             return joblib.load(LOCAL_MODEL_PATH)
 
-        print("Local model not found. Fetching latest from MLflow...")
-        fetch_latest_model()
-        model = mlflow.pyfunc.load_model(MODEL_ARTIFACT_PATH)
-        return model
+        # 2️⃣ Load from already downloaded MLflow artifacts
+        elif os.path.exists(MODEL_ARTIFACT_PATH):
+            print(f"✅ Loading model from downloaded MLflow artifacts: {MODEL_ARTIFACT_PATH}")
+            model = mlflow.sklearn.load_model(MODEL_ARTIFACT_PATH)
+            joblib.dump(model, LOCAL_MODEL_PATH)
+            print(f"💾 Cached model locally at: {LOCAL_MODEL_PATH}")
+            return model
+
+        # 3️⃣ Fetch from MLflow if nothing found
+        else:
+            print("⚠️ Model not found locally. Fetching latest from MLflow...")
+            fetch_latest_model()
+
+            if os.path.exists(MODEL_ARTIFACT_PATH):
+                model = mlflow.sklearn.load_model(MODEL_ARTIFACT_PATH)
+                joblib.dump(model, LOCAL_MODEL_PATH)
+                print(f"💾 Cached fetched model locally at: {LOCAL_MODEL_PATH}")
+                return model
+            else:
+                raise HTTPException(status_code=404, detail="Model fetch failed — artifact not found after download.")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
@@ -195,7 +217,6 @@ def load_latest_model():
 # --------------------------------------------------------------
 # FastAPI Routes
 # --------------------------------------------------------------
-
 @app.post("/train", summary="Train and log a Random Forest model to MLflow")
 def train_model():
     """Train model, log to MLflow, and dump locally."""
@@ -232,6 +253,5 @@ def predict(input_data: IrisInput):
 # --------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-
     print("🚀 Starting FastAPI app on http://0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
