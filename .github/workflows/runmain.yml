@@ -98,7 +98,7 @@ jobs:
       - name: Verify GCP Access
         run: |
           echo "🧾 Checking bucket accessibility..."
-          gsutil ls gs://mlops-course-lively-nimbus-473407-m9 || echo "⚠️ Could not list bucket contents"
+          gsutil ls gs://mlops-lively-nimbus-473407-m9 || echo "⚠️ Could not list bucket contents"
 
       # ----------------------------------------------------------
       # Step 7: Pull DVC data (no version switching)
