@@ -1,0 +1,49 @@
+name: GCP Auth Diagnostic
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: lively-nimbus-473407-m9
+  REGION: us-central1
+  REPOSITORY: my-repo
+
+jobs:
+  debug-auth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ☁️ Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_CREDENTIALS_JSON }}
+          export_default_credentials: true
+
+      - name: 🔍 Verify gcloud identity
+        run: |
+          echo "✅ Checking active account and token info"
+          gcloud auth list
+          gcloud config list
+          gcloud auth print-access-token | head -c 30 && echo "... (truncated)"
+          echo "✅ Checking if Artifact Registry is reachable"
+          gcloud artifacts repositories list --location=${{ env.REGION }} --project=${{ env.PROJECT_ID }}
+
+      - name: 🔧 Configure Docker for Artifact Registry
+        run: |
+          echo "🔧 Configuring docker auth..."
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+          echo "🔍 Checking docker credentials:"
+          cat ~/.docker/config.json | jq '.auths'
+
+      - name: 🧪 Dry-run push test
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/diagnostic-test:debug"
+          echo "🚀 Simulating push to $IMAGE_URI"
+          docker login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" https://${{ env.REGION }}-docker.pkg.dev
+          echo "✅ Token login succeeded. If next push fails, permission issue."
+          docker build -t "$IMAGE_URI" -<<EOF
+          FROM busybox
+          CMD echo "diagnostic test"
+          EOF
+          docker push "$IMAGE_URI"
