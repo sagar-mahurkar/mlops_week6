@@ -32,7 +32,7 @@ jobs:
       - name: Decode service account key
         run: |
           echo "${{ secrets.GCP_CREDENTIALS_B64 }}" | base64 --decode > gcp-key.json
-          echo "🔍 Service account key decoded to gcp-key.json"
+          echo "✅ Service account key decoded to gcp-key.json"
 
       # -----------------------------------------------------------
       # Setup gcloud with decoded JSON
@@ -45,7 +45,7 @@ jobs:
           export_default_credentials: true
 
       # -----------------------------------------------------------
-      # Debug authentication
+      # Debug authentication before pushing Docker image
       # -----------------------------------------------------------
       - name: Debug gcloud auth
         run: |
@@ -54,7 +54,7 @@ jobs:
           echo "🔍 Project:"
           gcloud config list project
           echo "🔍 Artifact Registry repositories:"
-          gcloud artifacts repositories list --location=${{ env.GAR_LOCATION }}
+          gcloud artifacts repositories list --location=${{ env.GAR_LOCATION }} --project=${{ env.PROJECT_ID }}
 
       # -----------------------------------------------------------
       # Configure Docker for Artifact Registry
