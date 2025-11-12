@@ -120,8 +120,8 @@ jobs:
         run: |
           IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE}:latest"
           echo "🔄 Updating deployment image to $IMAGE_URI"
-          kubectl set image deployment/iris-api-deployment \
+          kubectl set image deployment/demo-iris-workload \
             ${IMAGE}="$IMAGE_URI" \
             --namespace default
           echo "⏳ Waiting for rollout..."
-          kubectl rollout status deployment/iris-api-deployment
+          kubectl rollout status deployment/demo-iris-workload
