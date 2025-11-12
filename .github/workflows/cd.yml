@@ -101,13 +101,16 @@ jobs:
 
       # -----------------------------------------------------------
       # Deploy updated image to GKE
+      # FIX: Use ${IMAGE} (iris-api) as the container name instead of the hardcoded iris-api-container.
+      # This name must match the container name in the Kubernetes deployment YAML.
       # -----------------------------------------------------------
       - name: Deploy updated image to GKE
         run: |
           IMAGE_URI="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE}:latest"
           echo "🔄 Updating deployment image to $IMAGE_URI"
+          # Using ${IMAGE} as the container name (likely 'iris-api')
           kubectl set image deployment/iris-api-deployment \
-            iris-api-container="$IMAGE_URI" \
+            ${IMAGE}="$IMAGE_URI" \
             --namespace default
           echo "⏳ Waiting for rollout..."
           kubectl rollout status deployment/iris-api-deployment
